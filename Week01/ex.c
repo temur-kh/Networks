@@ -92,6 +92,16 @@ char** split(char* str, int n) {
   return words;
 }
 
+int isNumeric(char *num) {
+    char* str = num;
+    while(*str != '\0') {
+        if(*str < '0' || *str > '9')
+            return 0;
+        str++;
+    }
+    return 1;
+}
+
 int main() {
   int fds[2];
   pipe(fds);
@@ -129,6 +139,13 @@ int main() {
       close(fds[1]);
       read(fds[0], str, BUFFER_LIMIT);
       char** words = split(str, 2);
+
+      if (words == NULL) {
+        printf("Wrong format of input! Try again!\n");
+        free(str);
+        continue;
+      }
+
       if (!strcmp(str, "exit")) {
         printf("Server is terminated!\n");
         return EXIT_SUCCESS;
@@ -137,7 +154,7 @@ int main() {
         if (data != INT_MIN) {
           printf("Peeked element: %d\n", data);
         }
-      } else if (!strcmp(words[0], "push")) {
+      } else if (!strcmp(words[0], "push") && words[1] != NULL && isNumeric(words[1])) {
         int data = strtol(words[1], NULL, 10);
         push(stk, data);
       } else if (!strcmp(words[0], "pop")) {
@@ -158,8 +175,10 @@ int main() {
         stack_size(stk);
       } else {
         printf("Wrong format of input! Try again!\n");
+        free(str);
         continue;
       }
+      
       free(str);
     }
   } else {
