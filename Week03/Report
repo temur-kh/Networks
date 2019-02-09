@@ -1,0 +1,111 @@
+REPORT:
+
+socket() ---------------------------
+Type: non-blocking
+------------------------------------
+Synopsis:
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	int socket(int domain, int type, int protocol);
+------------------------------------
+Description:
+Creates a socket for communication and returns a file descriptor that refers to this socket. used to create a master socket at the start.
+
+The domain - communication domain, defined in <sys/socket.h> file. For instance, AF_INET is used for IPv4 Internet protocols.
+
+The type specifies the communication semantics. For instance, SOCK_STREAM provides sequenced, reliable, two-way, connection-based byte streams.
+
+The protocol specifies a particular protocol to be used with the socket. For instance, IPPROTO_TCP for TCP socket option.
+------------------------------------
+Return value and error handling:
+On success, a file descriptor for the new socket is returned.  On error, -1 is returned, and errno is set appropriately (you can see a list of errors on http://man7.org/linux/man-pages/man2/socket.2.html#ERRORS).
+------------------------------------
+
+------------------------------------
+accept() ---------------------------
+Type: non-blocking
+------------------------------------
+Synopsis:
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+------------------------------------
+Description:
+Used to create a temporary file descriptor for communication with the client to send and receive messages for the rest of the life of connection.
+
+The sockfd is the file descriptor of master socket used only for accepting. Master socket is the socket 'bind'ed and 'listen'ing for connection.
+
+The addr is the address of the structure to store the info from socket.
+
+The addrlen is the size of the addr structure.
+------------------------------------
+Return value and error handling:
+On success, these system calls return a nonnegative integer that is a file descriptor for the accepted socket.  On error, -1 is returned, and errno is set appropriately (you can see a list of errors on http://man7.org/linux/man-pages/man2/accept.2.html#ERRORS).
+------------------------------------
+
+------------------------------------
+select() ---------------------------
+Type: blocking
+------------------------------------
+Synopsis:
+       #include <sys/select.h>
+       #include <sys/time.h>
+       #include <sys/types.h>
+       #include <unistd.h>
+       int select(int nfds, fd_set *readfds, fd_set *writefds,
+                  fd_set *exceptfds, struct timeval *timeout);
+------------------------------------
+Description:
+Blocks until Blocks until one or more the file descriptors become ready to perform I/O operations. For instance, the data arrives on any of descriptor defined in the readfds set.
+
+The ndfs - the highest-numbered file descriptor in any of the three fd_sets.
+
+The readfds is the set of file descriptors for reading coming data.
+
+Other arguments are not necessary, yet, and can be set to NULL.
+------------------------------------
+Return value and error handling:
+On success, returns the number of file descriptors contained in the three returned descriptor sets. On error, -1 is returned, and errno is set to indicate the error (you can see a list of errors on http://man7.org/linux/man-pages/man2/select.2.html#ERRORS).
+------------------------------------
+
+------------------------------------
+bind() -----------------------------
+Type: non-blocking
+------------------------------------
+Synopsis:
+       #include <sys/types.h>
+       #include <sys/socket.h>
+       int bind(int sockfd, const struct sockaddr *addr,
+                socklen_t addrlen);
+------------------------------------
+Description:
+Assigns the ip address and a port for communication of socket.
+
+The sockfd - the file descriptor of socket to communicate.
+
+The sockaddr is the address to the structure containing info about the server.
+
+The addrlen is the size of the sockaddr structure.
+------------------------------------
+Return value and error handling:
+On success, zero is returned.  On error, -1 is returned, and errno is set appropriately (you can see a list of errors on http://man7.org/linux/man-pages/man2/bind.2.html#ERRORS).
+------------------------------------
+
+------------------------------------
+listen() ---------------------------
+Type: non-blocking
+------------------------------------
+Synopsis:
+       #include <sys/types.h>
+       #include <sys/socket.h>
+       int listen(int sockfd, int backlog);
+------------------------------------
+Description:
+Used to listen for connections on a socket and set a limit for the connections' queue size.
+
+The sockfd is the file descriptor of the socket.
+
+The backlog is the maximum size of the connections' queue.
+------------------------------------
+Return value and error handling:
+On success, zero is returned.  On error, -1 is returned, and errno is set appropriately (you can see a list of errors on http://man7.org/linux/man-pages/man2/listen.2.html#ERRORS).
