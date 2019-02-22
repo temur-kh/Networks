@@ -14,7 +14,7 @@
 #include <pthread.h>
 
 /*Server process is running on this port no. Client has to send data to this port no*/
-#define SERVER_PORT     2000
+#define SERVER_PORT 2000
 #define THREADS_COUNT 10
 
 test_struct_t test_struct;
@@ -23,30 +23,31 @@ char data_buffer[1024];
 worker_struct_t threads[THREADS_COUNT];
 
 void *worker(void *num) {
-    worker_struct_t *data = (worker_struct_t *) &threads[(int*)num];
-    test_struct_t *client_data = &(data->client_data);
-    struct sockaddr_in *client_addr = data->client_addr;
-    int sock_udp_fd = data->sock_udp_fd;
-    printf("Thread #%d received = %s, %d, %s\n", data->thread_num, client_data->name, client_data->age, client_data->group);
-    /* If the client sends a special msg to server, then server close the client connection
-     * for forever*/
-    if (client_data->age == 0) {
-        close(sock_udp_fd);
-        printf("Server closes connection with client : %s:%u\n", inet_ntoa(client_addr->sin_addr),
-               ntohs(client_addr->sin_port));
-        return;
-    }
+  int i = *((int *)num);
+  worker_struct_t *data = (worker_struct_t *) &threads[i];
+  test_struct_t *client_data = &(data->client_data);
+  struct sockaddr_in *client_addr = data->client_addr;
+  int sock_udp_fd = data->sock_udp_fd;
+  printf("Thread #%d received = %s, %d, %s\n", data->thread_num, client_data->name, client_data->age, client_data->group);
+  /* If the client sends a special msg to server, then server close the client connection
+   * for forever*/
+  if (client_data->age == 0) {
+      close(sock_udp_fd);
+      printf("Server closes connection\n");
+      exit(0);
+  }
 
-    result_struct_t result;
-    strcpy(result.name, client_data->name);
-    result.age = client_data->age;
-    strcpy(result.group, client_data->group);
+  result_struct_t result;
+  strcpy(result.name, client_data->name);
+  result.age = client_data->age;
+  strcpy(result.group, client_data->group);
 
-    /* Server replying back to client now*/
-    int sent_recv_bytes = sendto(sock_udp_fd, (char *) &result, sizeof(result_struct_t), 0,
-                             (struct sockaddr *)client_addr, sizeof(struct sockaddr));
+  /* Server replying back to client now*/
+  int sent_recv_bytes = sendto(sock_udp_fd, (char *) &result, sizeof(result_struct_t), 0,
+                           (struct sockaddr *)client_addr, sizeof(struct sockaddr));
 
-    printf("Server sent %d bytes in reply to client\n", sent_recv_bytes);
+  printf("Thread sent %d bytes in reply to client\n", sent_recv_bytes);
+  free(threads[i].client_addr);
 }
 
 void setup_udp_server_communication() {
@@ -137,7 +138,6 @@ void setup_udp_server_communication() {
           printf("thread creation failed\n");
           exit(1);
         }
-        free(threads[i].client_addr);
         i = (i+1) < THREADS_COUNT ? i+1 : 0;
     }
 }
