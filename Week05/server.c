@@ -28,7 +28,7 @@ void *worker(void *num) {
   test_struct_t *client_data = &(data->client_data);
   struct sockaddr_in *client_addr = data->client_addr;
   int sock_udp_fd = data->sock_udp_fd;
-  printf("Thread #%d received = %s, %d, %s\n", data->thread_num, client_data->name, client_data->age, client_data->group);
+  printf("Thread #%d received = %s, %d, %s\n", data->thread_id, client_data->name, client_data->age, client_data->group);
   /* If the client sends a special msg to server, then server close the client connection
    * for forever*/
   if (client_data->age == 0) {
@@ -48,6 +48,7 @@ void *worker(void *num) {
 
   printf("Thread sent %d bytes in reply to client\n", sent_recv_bytes);
   free(threads[i].client_addr);
+  sleep(10);
 }
 
 void setup_udp_server_communication() {
