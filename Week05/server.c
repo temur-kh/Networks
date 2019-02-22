@@ -8,7 +8,7 @@
 #include <netdb.h>
 #include <memory.h>
 #include <errno.h>
-#include <zconf.h>
+// #include <zconf.h>
 #include "common.h"
 #include <arpa/inet.h>
 #include <pthread.h>
