@@ -39,20 +39,26 @@ void create_out_ping() {
   strcpy(out_ping.server_rspn, "");
 
   node *nd = &(out_ping.array_of_known_nodes[0]);
-  strcpy(nd->name, "FIRST PEER");
-  char port[10];
-  sprintf(port, "%d", server_port);
-  concat_ip_port(server_ip, port, nd->ip_port);
+  strcpy(nd->name, out_ping.self.name);
+  strcpy(nd->ip_port, out_ping.self.ip_port);
+  // strcpy(nd->name, "FIRST PEER");
+  // char port[10];
+  // sprintf(port, "%d", server_port);
+  // concat_ip_port(server_ip, port, nd->ip_port);
 }
 
 int add_to_list(node* nodes, int* list_sz, node nd) {
   for(int i=0;i<*list_sz;i++) {
+    // printf("OK222\n");
     if (!strcmp(nd.name, nodes[i].name) && !strcmp(nd.ip_port, nodes[i].ip_port)) {
+      // printf("OK333\n");
       return 0;
     }
   }
+  // printf("OK111\n");
   *list_sz = (*list_sz) + 1;
   nodes = realloc(nodes, (*list_sz) * sizeof(node));
+  // printf("OK444\n");
   return 1;
 }
 
@@ -111,6 +117,7 @@ void* ping_peers(void* arg) {
       } else continue;
 
       if (!strcmp(in_ping->server_rspn, "ok")) {
+        printf("[FILE] OK\n");
         ht_set(files_table, out_ping.client_rqst, nd_list[i].ip_port);
         strcpy(out_ping.client_rqst, "next...");
         ping(nd_list[i], &in_ping);
