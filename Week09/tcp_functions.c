@@ -26,7 +26,7 @@ int socket_send(int sock, char* msg, int len) {
   tv.tv_sec = 20; /* 20 Secs Timeout */
   tv.tv_usec = 0;
   if(setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv,sizeof(tv)) < 0) {
-    printf("Time Out\n");
+    printf("[SOCKET SEND]: [ERROR]: Time Out\n");
     return -1;
   }
   res = send(sock, msg, len, 0);
@@ -39,7 +39,7 @@ int socket_rcv(int sock, char* msg, int len) {
   tv.tv_sec = 20; /* 20 Secs Timeout */
   tv.tv_usec = 0;
   if(setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(tv)) < 0) {
-    printf("Time Out\n");
+    printf("[SOCKET RCV]: [ERROR]: Time Out\n");
     return -1;
   }
   res = recv(sock, msg, len, 0);

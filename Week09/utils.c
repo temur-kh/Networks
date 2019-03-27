@@ -1,12 +1,5 @@
 #include <ifaddrs.h>
 
-// int concat_ip_port(char* ip, char* port, char* res) {
-//   strcpy(res, ip);
-//   strcat(res, ":");
-//   strcat(res, port);
-//   return 0;
-// }
-
 int get_ip_port(char* ip_port, char* ip, int* port) {
   char div[] = ":";
   char *ptr = strtok(ip_port, div);
@@ -51,20 +44,12 @@ int get_name_and_ip_port(char* line, char* name, char* ip_port, char* rest) {
 int get_filenames(char* rest, text* text) {
   char div[] = ",";
   char *ptr = strtok(rest, div);
-  // printf("rest: %s\n", ptr);
   text->size = 0;
-  // printf("ok00\n");
   while(ptr != NULL) {
-    // text->words[text->size] = malloc(strlen(ptr));
-    // printf("ok01\n");
     strcpy(text->words[text->size], "");
-    // printf("ok02\n");
     strcat(text->words[text->size], ptr);
-    // printf("ok03\n");
     (text->size)++;
-    // printf("ok04\n");
     ptr = strtok(NULL, div);
-    // printf("ok05\n");
   }
   return text->size;
 }
@@ -105,18 +90,14 @@ int get_my_ip(char* my_ip) {
 
 int read_file(char *filename, text* text) {
   FILE * fp = fopen(filename, "r");
-  // printf("OK23\n");
 	if (fp == NULL) return -1;
   char x[1024];
   text->size = 0;
   while (fscanf(fp, " %1023s", x) == 1) {
-    // text->words[text->size] = malloc(sizeof(x));
-    // memcpy(text->words[text->size], x, sizeof(x));
     strcpy(text->words[text->size], x);
     (text->size)++;
     memset(x, 0, sizeof(x));
   }
-  // printf("OK32\n");
 	fclose(fp);
   return text->size;
 }

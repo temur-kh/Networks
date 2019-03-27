@@ -85,7 +85,6 @@ void concat_peer_d(sync_peer* peer_d, node cur_nd) {
 
 void* sync_node(void* nd) {
   node* cur = (node*) nd;
-  // printf("ok: %s %s\n", cur->name, cur->ip_port);
   struct sockaddr_in* addr = malloc(sizeof(struct sockaddr_in));
   if(create_node_addr(*cur, addr) == -1) {
     printf("[SYNC NODE]: [ERROR]: The node contains invalid ip_port: %s.\n", cur->ip_port);
@@ -183,16 +182,10 @@ void* request() {
           free(txt); break;
         }
         char text[DEFAULT_SIZE];
-        // printf("ok1\n");
         strcpy(text, "");
-        // printf("ok2\n");
         for (int i=0; i<txt->size; i++) {
-          // printf("ok3\n");
           strcat(text, txt->words[i]);
           strcat(text, SPACE);
-          // printf("text: %s\n", text);
-          // if (txt->words[i] == NULL) printf("NOT GOOOOD!\n");
-          //free(txt->words[i]);
         }
         if (text[strlen(text)-1] == ' ') {
           text[strlen(text)-1] = 0;
@@ -224,7 +217,7 @@ void* request() {
           printf("[REQUEST]: [ERROR]: Could not send a protocol flag.\n");
           free(flag); close(sock); break;
         }
-        printf("flag sent\n");
+
         // send the filename
         file_rqst* rqst = malloc(sizeof(file_rqst));
         strcpy(rqst->filename, rqst_file);
@@ -232,7 +225,6 @@ void* request() {
           printf("[REQUEST]: [ERROR]: Could not send the filename.\n");
           free(rqst); close(sock); break;
         }
-        printf("rqst sent\n");
 
         // receive the number of words
         num_t* num = malloc(sizeof(num_t));
@@ -240,7 +232,6 @@ void* request() {
           printf("[REQUEST]: [ERROR]: Could not receive the number of words.\n");
           free(num); close(sock); break;
         }
-        printf("num: %d\n", num->n);
 
         // receive the words one by one
         char text[DEFAULT_SIZE];
@@ -252,7 +243,6 @@ void* request() {
             printf("[REQUEST]: [ERROR]: Could not receive a word.\n");
             free(num); free(wrd); close(sock); break;
           }
-          printf("word: %s\n", wrd->val);
           strcat(text, wrd->val);
           strcat(text, SPACE);
           free(wrd);
@@ -279,7 +269,6 @@ void parse_data(sync_data* data) {
   for (int i=0; i<txt->size; i++) {
     if (txt->words[i] != NULL && strlen(txt->words[i])) {
       ht_set(files_table, txt->words[i], ip_port);
-      // free(txt->words[i]);
     }
   }
   free(txt);
@@ -337,7 +326,6 @@ void* response(void* sck) {
     printf("[RESPONSE]: [ERROR]: Could not receive the filename.\n");
     free(rqst); close(*sock); free(sock); return NULL;
   }
-  printf("received filename: %s\n", rqst->filename);
   if (!valid_filename(rqst->filename)) {
     printf("[RESPONSE]: [SECURITY]: Attempt to access another file.\n");
     free(rqst); close(*sock); free(sock); return NULL;
@@ -349,7 +337,6 @@ void* response(void* sck) {
   }
   free(rqst);
 
-  printf("read file\n");
   // send the number of words
   num_t* num = malloc(sizeof(num_t));
   num->n = txt->size;
@@ -357,11 +344,10 @@ void* response(void* sck) {
     printf("[RESPONSE]: [ERROR]: Could not send the number of words.\n");
     free(num); free(txt); close(*sock); free(sock); return NULL;
   }
-  printf("num sent: %d\n", num->n);
   free(num);
+
   // send the words one by one
   for (int i=0; i<txt->size; i++) {
-    printf("OK\n");
     word* wrd = malloc(sizeof(word));
     memset(wrd->val, 0, sizeof(wrd->val));
     strcpy(wrd->val, txt->words[i]);
@@ -369,8 +355,7 @@ void* response(void* sck) {
       printf("[RESPONSE]: [ERROR]: Could not send a word.\n");
       free(wrd); free(txt); close(*sock); free(sock); return NULL;
     }
-    printf("words sent: %s", wrd->val);
-    free(wrd); //free(txt->words[i]);
+    free(wrd);
   }
   free(txt);
   close(*sock); free(sock);
@@ -395,9 +380,7 @@ void* server() {
   while(1) {
     int *sock = malloc(sizeof(int));
     struct sockaddr_in addr;
-    // printf("ok1\n");
     *sock = accept(master_sock, (struct sockaddr*) &addr, &len);
-    // printf("ok2\n");
     if (*sock == -1) {
       printf("[SERVER]: [ERROR]: Could not accept a connection.\n");
       free(sock); continue;
@@ -409,7 +392,6 @@ void* server() {
       printf("[SERVER]: [ERROR]: Could not receive a flag.\n");
       free(flag); close(*sock); free(sock); continue;
     }
-    // printf("flag received: %d\n", flag->flag);
     if (flag->flag == 1) {
       pthread_create(&pthread_id[(ind++)%DEFAULT_SIZE], NULL, rcv_sync, (void*) sock);
     } else if (flag->flag == 0){
