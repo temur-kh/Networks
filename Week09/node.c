@@ -183,12 +183,16 @@ void* request() {
           free(txt); break;
         }
         char text[DEFAULT_SIZE];
+        printf("ok1\n");
         strcpy(text, "");
+        printf("ok2\n");
         for (int i=0; i<txt->size; i++) {
+          printf("ok3\n");
           strcat(text, txt->words[i]);
           strcat(text, SPACE);
+          printf("text: %s\n", text);
           if (txt->words[i] == NULL) printf("NOT GOOOOD!\n");
-          free(txt->words[i]);
+          //free(txt->words[i]);
         }
         if (text[strlen(text)-1] == ' ') {
           text[strlen(text)-1] = 0;
@@ -275,7 +279,7 @@ void parse_data(sync_data* data) {
   for (int i=0; i<txt->size; i++) {
     if (txt->words[i] != NULL && strlen(txt->words[i])) {
       ht_set(files_table, txt->words[i], ip_port);
-      free(txt->words[i]);
+      // free(txt->words[i]);
     }
   }
   free(txt);
@@ -366,7 +370,7 @@ void* response(void* sck) {
       free(wrd); free(txt); close(*sock); free(sock); return NULL;
     }
     printf("words sent: %s", wrd->val);
-    free(wrd); free(txt->words[i]);
+    free(wrd); //free(txt->words[i]);
   }
   free(txt);
   close(*sock); free(sock);
