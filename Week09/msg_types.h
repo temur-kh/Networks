@@ -23,6 +23,6 @@ typedef struct {
 } word;
 
 typedef struct {
-  char* words[1024];
+  char words[1024][1024];
   int size;
 } text;
