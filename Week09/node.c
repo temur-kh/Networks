@@ -183,10 +183,14 @@ void* request() {
           free(txt); break;
         }
         char text[DEFAULT_SIZE];
+        printf("ok1\n");
         strcpy(text, "");
+        printf("ok2\n");
         for (int i=0; i<txt->size; i++) {
+          printf("ok3\n");
           strcat(text, txt->words[i]);
           strcat(text, SPACE);
+          printf("text: %s\n", text);
           if (txt->words[i] == NULL) printf("NOT GOOOOD!\n");
           free(txt->words[i]);
         }
