@@ -312,6 +312,7 @@ void* rcv_sync(void* sck) {
     }
     parse_peer_d(peer_d);
     free(peer_d);
+    usleep(100);
   }
   free(num);
   close(*sock); free(sock);
