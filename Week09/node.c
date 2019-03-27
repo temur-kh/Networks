@@ -177,21 +177,21 @@ void* request() {
         printf("[REQUEST]: [ERROR]: No such file found.\n");
         break;
       } else if (!strcmp(val, "localhost")) {  // the file found locally
-        text* txt = malloc(sizeof(txt));
+        text* txt = malloc(sizeof(text));
         if (read_file(rqst_file, txt) == -1) {
           printf("[REQUEST]: [ERROR]: Could not read the file from localhost.\n");
           free(txt); break;
         }
         char text[DEFAULT_SIZE];
-        printf("ok1\n");
+        // printf("ok1\n");
         strcpy(text, "");
-        printf("ok2\n");
+        // printf("ok2\n");
         for (int i=0; i<txt->size; i++) {
-          printf("ok3\n");
+          // printf("ok3\n");
           strcat(text, txt->words[i]);
           strcat(text, SPACE);
-          printf("text: %s\n", text);
-          if (txt->words[i] == NULL) printf("NOT GOOOOD!\n");
+          // printf("text: %s\n", text);
+          // if (txt->words[i] == NULL) printf("NOT GOOOOD!\n");
           //free(txt->words[i]);
         }
         if (text[strlen(text)-1] == ' ') {
@@ -274,7 +274,7 @@ void parse_data(sync_data* data) {
   char rest[DEFAULT_SIZE];
   get_name_and_ip_port(data->data, name, ip_port, rest);
   insert_peer(peers, name, ip_port);
-  text* txt = malloc(sizeof(txt));
+  text* txt = malloc(sizeof(text));
   get_filenames(rest, txt);
   for (int i=0; i<txt->size; i++) {
     if (txt->words[i] != NULL && strlen(txt->words[i])) {
@@ -342,7 +342,7 @@ void* response(void* sck) {
     printf("[RESPONSE]: [SECURITY]: Attempt to access another file.\n");
     free(rqst); close(*sock); free(sock); return NULL;
   }
-  text* txt = malloc(sizeof(txt));
+  text* txt = malloc(sizeof(text));
   if (read_file(rqst->filename, txt) == -1) {
     printf("[RESPONSE]: [ERROR]: Could not read the file.\n");
     free(rqst); free(txt); close(*sock); free(sock); return NULL;
@@ -409,7 +409,7 @@ void* server() {
       printf("[SERVER]: [ERROR]: Could not receive a flag.\n");
       free(flag); close(*sock); free(sock); continue;
     }
-    printf("flag received: %d\n", flag->flag);
+    // printf("flag received: %d\n", flag->flag);
     if (flag->flag == 1) {
       pthread_create(&pthread_id[(ind++)%DEFAULT_SIZE], NULL, rcv_sync, (void*) sock);
     } else if (flag->flag == 0){

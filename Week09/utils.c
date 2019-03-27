@@ -51,12 +51,20 @@ int get_name_and_ip_port(char* line, char* name, char* ip_port, char* rest) {
 int get_filenames(char* rest, text* text) {
   char div[] = ",";
   char *ptr = strtok(rest, div);
+  // printf("rest: %s\n", ptr);
   text->size = 0;
+  // printf("ok00\n");
   while(ptr != NULL) {
     // text->words[text->size] = malloc(strlen(ptr));
-    strcpy(text->words[text->size], ptr);
+    // printf("ok01\n");
+    strcpy(text->words[text->size], "");
+    // printf("ok02\n");
+    strcat(text->words[text->size], ptr);
+    // printf("ok03\n");
     (text->size)++;
+    // printf("ok04\n");
     ptr = strtok(NULL, div);
+    // printf("ok05\n");
   }
   return text->size;
 }
@@ -82,7 +90,7 @@ int get_my_ip(char* my_ip) {
   while (tmp) {
       if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_INET) {
           struct sockaddr_in *pAddr = (struct sockaddr_in *)tmp->ifa_addr;
-          if (!strcmp("eth1", tmp->ifa_name)) {
+          if (!strcmp("wlp2s0", tmp->ifa_name)) { //wlp2s0 or eth1
             strcpy(my_ip, inet_ntoa(pAddr->sin_addr));
             freeifaddrs(addrs);
             return 0;
@@ -97,7 +105,7 @@ int get_my_ip(char* my_ip) {
 
 int read_file(char *filename, text* text) {
   FILE * fp = fopen(filename, "r");
-  printf("OK23\n");
+  // printf("OK23\n");
 	if (fp == NULL) return -1;
   char x[1024];
   text->size = 0;
@@ -108,7 +116,7 @@ int read_file(char *filename, text* text) {
     (text->size)++;
     memset(x, 0, sizeof(x));
   }
-  printf("OK32\n");
+  // printf("OK32\n");
 	fclose(fp);
   return text->size;
 }
