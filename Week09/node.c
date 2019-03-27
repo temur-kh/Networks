@@ -187,6 +187,7 @@ void* request() {
         for (int i=0; i<txt->size; i++) {
           strcat(text, txt->words[i]);
           strcat(text, SPACE);
+          if (txt->words[i] == NULL) printf("NOT GOOOOD!\n");
           free(txt->words[i]);
         }
         if (text[strlen(text)-1] == ' ') {

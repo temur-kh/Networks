@@ -82,7 +82,7 @@ int get_my_ip(char* my_ip) {
   while (tmp) {
       if (tmp->ifa_addr && tmp->ifa_addr->sa_family == AF_INET) {
           struct sockaddr_in *pAddr = (struct sockaddr_in *)tmp->ifa_addr;
-          if (!strcmp("wlp2s0", tmp->ifa_name)) {
+          if (!strcmp("eth1", tmp->ifa_name)) {
             strcpy(my_ip, inet_ntoa(pAddr->sin_addr));
             freeifaddrs(addrs);
             return 0;
