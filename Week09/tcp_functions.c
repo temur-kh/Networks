@@ -38,7 +38,7 @@ int socket_rcv(int sock, char* msg, int len) {
   struct timeval tv;
   tv.tv_sec = 20; /* 20 Secs Timeout */
   tv.tv_usec = 0;
-  if(setsockopt(hSocket, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(tv)) < 0) {
+  if(setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv,sizeof(tv)) < 0) {
     printf("Time Out\n");
     return -1;
   }
