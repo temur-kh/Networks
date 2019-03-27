@@ -246,6 +246,7 @@ void* request() {
           strcat(text, wrd->val);
           strcat(text, SPACE);
           free(wrd);
+          usleep(100);
         }
         if (text[strlen(text)-1] == ' ') {
           text[strlen(text)-1] = 0;
