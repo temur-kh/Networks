@@ -160,7 +160,7 @@ void* send_sync() {
     for (int i=0; i<peers->size; i++) {
       pthread_join(thread_id[i], NULL);
     }
-    sleep(1);
+    sleep(10);
   }
 }
 
@@ -206,7 +206,7 @@ void* request() {
           free(cur); break;
         }
         if (socket_connect(sock, addr) == -1) {
-          printf("[REQUEST]: [ERROR]: Could not connect to the remote, deleting node knowledge.\n");
+          printf("[REQUEST]: [ERROR]: Could not connect to the remote, deleting node knowledge: %s.\n", cur->ip_port);
           remove_peer(peers, *cur); /*TODO remove from hashtable*/; free(cur); close(sock); break;
         }
 
@@ -246,7 +246,7 @@ void* request() {
           strcat(text, wrd->val);
           strcat(text, SPACE);
           free(wrd);
-          usleep(100);
+          usleep(20000);
         }
         if (text[strlen(text)-1] == ' ') {
           text[strlen(text)-1] = 0;
@@ -264,6 +264,7 @@ void parse_data(sync_data* data) {
   char ip_port[DEFAULT_SIZE];
   char rest[DEFAULT_SIZE];
   get_name_and_ip_port(data->data, name, ip_port, rest);
+  printf("info: %s %s %s\n", name, ip_port, rest);
   insert_peer(peers, name, ip_port);
   text* txt = malloc(sizeof(text));
   get_filenames(rest, txt);
@@ -278,7 +279,9 @@ void parse_data(sync_data* data) {
 void parse_peer_d(sync_peer* peer_d) {
   char name[DEFAULT_SIZE];
   char ip_port[DEFAULT_SIZE];
+  if (peer_d->data[0] == ':') return;
   get_name_and_ip_port(peer_d->data, name, ip_port, NULL);
+  printf("peer data: %s %s\n", name, ip_port);
   insert_peer(peers, name, ip_port);
 }
 
@@ -292,6 +295,7 @@ void* rcv_sync(void* sck) {
     printf("[RCV SYNC]: [ERROR]: Could not receive the personal data.\n");
     free(data); close(*sock); free(sock); return NULL;
   }
+  printf("info: %s\n", data->data);
   parse_data(data);
   free(data);
 
@@ -301,6 +305,7 @@ void* rcv_sync(void* sck) {
     printf("[RCV SYNC]: [ERROR]: Could not receive the peers' number.\n");
     free(num); close(*sock); free(sock); return NULL;
   }
+  printf("peer_num: %d\n", num->n );
 
   // send the peers one by one (except for the receiving peer)
   for (int i=0; i<num->n; i++) {
@@ -310,9 +315,10 @@ void* rcv_sync(void* sck) {
       printf("[RCV SYNC]: [ERROR]: Could not receive a peer's data.\n");
       free(peer_d); close(*sock); free(sock); return NULL;
     }
+    printf("peer: %s\n", peer_d->data);
     parse_peer_d(peer_d);
     free(peer_d);
-    usleep(100);
+    usleep(20000);
   }
   free(num);
   close(*sock); free(sock);
@@ -353,11 +359,12 @@ void* response(void* sck) {
     word* wrd = malloc(sizeof(word));
     memset(wrd->val, 0, sizeof(wrd->val));
     strcpy(wrd->val, txt->words[i]);
-    if (socket_send(*sock, (char*) wrd->val, sizeof(wrd->val)) == -1) {
+    if (socket_send(*sock, (char*) wrd->val, strlen(wrd->val)) == -1) {
       printf("[RESPONSE]: [ERROR]: Could not send a word.\n");
       free(wrd); free(txt); close(*sock); free(sock); return NULL;
     }
     free(wrd);
+    usleep(20000);
   }
   free(txt);
   close(*sock); free(sock);
@@ -394,6 +401,7 @@ void* server() {
       printf("[SERVER]: [ERROR]: Could not receive a flag.\n");
       free(flag); close(*sock); free(sock); continue;
     }
+    printf("flag: %d\n", flag->flag);
     if (flag->flag == 1) {
       pthread_create(&pthread_id[(ind++)%DEFAULT_SIZE], NULL, rcv_sync, (void*) sock);
     } else if (flag->flag == 0){
