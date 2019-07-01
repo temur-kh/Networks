@@ -15,11 +15,12 @@
 #include "msg_types.h"
 #include "p2p_types.h"
 #include "database.c"
-#include "hashtable.c"
+#include "hashtable_v2.c"
 #include "utils.c"
 #define DEFAULT_SIZE 1024
-#define MY_PORT 2001
-#define MY_PORT_STR "2001"
+#define MY_PORT 2000
+#define BLDB_LIMIT 5
+#define MY_PORT_STR "2000"
 #define MY_NAME "TemurKholmatov"
 #define SEPARATOR ":"
 #define COMMA ","
@@ -27,7 +28,11 @@
 #include "tcp_functions.c"
 
 peers_list *peers;
-hashtable_t *files_table;
+hashtable_t *kdb;
+hashtable_t *cdb;
+hashtable_t *bldb;
+
+pthread_mutex_t cdb_mx, bldb_mx;
 
 void add_my_files(hashtable_t* table) {
   DIR *d;
@@ -36,7 +41,7 @@ void add_my_files(hashtable_t* table) {
   if (d) {
     while ((dir = readdir(d)) != NULL) {
       if(valid_filename(dir->d_name)) {
-        ht_set(table, dir->d_name, "localhost");
+        ht_put(table, dir->d_name, (void*) "localhost");
       }
     }
     closedir(d);
@@ -57,11 +62,11 @@ void concat_data(sync_data* data) {
   strcat(line, SEPARATOR);
   strcat(line, MY_PORT_STR);
   strcat(line, SEPARATOR);
-  for (int i=0; i<files_table->size; i++) {
-    entry_t *entry = files_table->table[i];
+  for (int i=0; i<kdb->size; i++) {
+    hash_elem_t *entry = kdb->table[i];
     if (entry != NULL) {
       while(entry != NULL && entry->key != NULL) {
-        if (!strcmp(entry->value, "localhost")) {
+        if (!strcmp(entry->data, "localhost")) {
           strcat(line, entry->key);
           strcat(line, COMMA);
         }
@@ -104,7 +109,6 @@ void* sync_node(void* nd) {
   // send the flag 1
   pcl_flag* flag = malloc(sizeof(pcl_flag));
   flag->flag = 1;
-  flag->flag = htonl(flag->flag);
   if (socket_send(sock, (char*) &(flag->flag), sizeof(flag->flag)) == -1) {
     printf("[SYNC NODE]: [ERROR]: Could not send a protocol flag.\n");
     free(flag); free(cur); close(sock); return NULL;
@@ -161,7 +165,7 @@ void* send_sync() {
     for (int i=0; i<peers->size; i++) {
       pthread_join(thread_id[i], NULL);
     }
-    sleep(10);
+    sleep(5);
   }
 }
 
@@ -172,7 +176,7 @@ void* request() {
     scanf("%s", rqst_file);
     int ok = 0;
     while(!ok) {
-      char *val = ht_get(files_table, rqst_file);
+      char *val = ht_get(kdb, rqst_file);
       if (val == NULL) {  // file not found
         printf("[REQUEST]: [ERROR]: No such file found.\n");
         break;
@@ -214,7 +218,6 @@ void* request() {
         // send the flag 0
         pcl_flag* flag = malloc(sizeof(pcl_flag));
         flag->flag = 0;
-        flag->flag = htonl(flag->flag);
         if (socket_send(sock, (char*) &(flag->flag), sizeof(flag->flag)) == -1) {
           printf("[REQUEST]: [ERROR]: Could not send a protocol flag.\n");
           free(flag); close(sock); break;
@@ -234,7 +237,6 @@ void* request() {
           printf("[REQUEST]: [ERROR]: Could not receive the number of words.\n");
           free(num); close(sock); break;
         }
-        num->n = ntohl(num->n);
 
         // receive the words one by one
         char text[DEFAULT_SIZE];
@@ -262,18 +264,20 @@ void* request() {
   }
 }
 
-void parse_data(sync_data* data) {
+void parse_data(sync_data* data, char* ip_port_out) {
   char name[DEFAULT_SIZE];
   char ip_port[DEFAULT_SIZE];
   char rest[DEFAULT_SIZE];
+  // printf("[PARSE DATA] data: %s\n", data->data);
   get_name_and_ip_port(data->data, name, ip_port, rest);
-  printf("info: %s %s %s\n", name, ip_port, rest);
+  // printf("[PARSE DATA]: info: '%s' '%s' '%s' '%s'\n", data->data, name, ip_port, rest);
+  strcpy(ip_port_out, ip_port);
   insert_peer(peers, name, ip_port);
   text* txt = malloc(sizeof(text));
   get_filenames(rest, txt);
   for (int i=0; i<txt->size; i++) {
     if (txt->words[i] != NULL && strlen(txt->words[i])) {
-      ht_set(files_table, txt->words[i], ip_port);
+      ht_put(kdb, txt->words[i], (void*) ip_port);
     }
   }
   free(txt);
@@ -284,48 +288,117 @@ void parse_peer_d(sync_peer* peer_d) {
   char ip_port[DEFAULT_SIZE];
   if (peer_d->data[0] == ':') return;
   get_name_and_ip_port(peer_d->data, name, ip_port, NULL);
-  printf("peer data: %s %s\n", name, ip_port);
+  // printf("peer data: %s %s\n", name, ip_port);
   insert_peer(peers, name, ip_port);
 }
 
 void* rcv_sync(void* sck) {
   int* sock = (int*) sck;
+  struct sockaddr_in addr;
+  int alen;
+  if (getsockname(*sock, (struct sockaddr*)&addr, &alen) == -1) {
+    printf("[RCV SYNC]: [ERROR]: Could not read addr of socket.\n");
+    close(*sock); free(sock); return NULL;
+  }
+  char *ip_port = inet_ntoa(addr.sin_addr);
+  printf("[RCV SYNC]: IP in socket addr to be hashed: %s\n", ip_port);
+
+  pthread_mutex_lock(&cdb_mx);
+  int *cdb_data = (int*) ht_get(cdb, ip_port);
+  pthread_mutex_unlock(&cdb_mx);
+  if (cdb_data != NULL) {
+    int as = *cdb_data;
+    printf("[RCV SYNC]: count: %d\n", as);
+  }
+  if (ht_get(bldb, ip_port) != NULL) {
+    printf("[RCV SYNC]: [WARNING]: The node %s is in the black list.\n", ip_port);
+    /*free(ip_port);*/ close(*sock); free(sock); return NULL;
+  } else if (cdb_data != NULL) {
+    if (*cdb_data > BLDB_LIMIT) {
+      // printf("HERE\n");
+      printf("[RCV SYNC] Current the cdb count: %d.\n", *cdb_data);
+      pthread_mutex_lock(&bldb_mx);
+      ht_put(bldb, ip_port, (void*) cdb_data);
+      pthread_mutex_unlock(&bldb_mx);
+      pthread_mutex_lock(&cdb_mx);
+      ht_remove(cdb, ip_port);
+      pthread_mutex_unlock(&cdb_mx);
+      printf("[RCV SYNC]: [WARNING]: The node %s is put to the black list: %d.\n", ip_port, *cdb_data);
+      /*free(ip_port);*/ close(*sock); free(sock); return NULL;
+    } else {
+      pthread_mutex_lock(&cdb_mx);
+      printf("[RCV SYNC] Current the cdb count: %d.\n", *cdb_data);
+      int new_data = (*cdb_data) + 1;
+      printf("[RCV SYNC]: Increase the cdb count of %s - %d.\n", ip_port, new_data);
+      ht_put(cdb, ip_port, (void*) &new_data);
+      pthread_mutex_unlock(&cdb_mx);
+    }
+  } else {
+    // cdb_data = malloc(sizeof(int));
+    int new_data = 1;
+    pthread_mutex_lock(&cdb_mx);
+    printf("[RCV SYNC]: Put the cdb count of %s to 1.\n", ip_port);
+    ht_put(cdb, ip_port, (void*) &new_data);
+    pthread_mutex_unlock(&cdb_mx);
+    // free(cdb_data);
+  }
 
   // receive the data of the node
+  int recv_bytes = 0;
   sync_data* data = malloc(sizeof(sync_data));
   memset(data->data, 0, sizeof(data->data));
-  if (socket_rcv(*sock, (char*) data->data, sizeof(data->data)) == -1) {
+  if ((recv_bytes = socket_rcv(*sock, (char*) data->data, sizeof(data->data))) == -1) {
     printf("[RCV SYNC]: [ERROR]: Could not receive the personal data.\n");
     free(data); close(*sock); free(sock); return NULL;
   }
-  printf("info: %s\n", data->data);
-  parse_data(data);
+  if (recv_bytes == 0) {
+    printf("[RCV SYNC]: [WARNING]: No data send by the peer %s\n", ip_port);
+    free(data); close(*sock); free(sock); return NULL;
+  }
+  char *ip = malloc(DEFAULT_SIZE);
+  parse_data(data, ip);
+  free(ip);
   free(data);
 
-  // send the number of peers (except for the receiving peer)
+  // receive the number of peers (except for the receiving peer)
   num_t* num = malloc(sizeof(num_t));
-  if (socket_rcv(*sock, (char*) &(num->n), sizeof(num->n)) == -1) {
+  recv_bytes = 0;
+  if ((recv_bytes = socket_rcv(*sock, (char*) &(num->n), sizeof(num->n))) == -1) {
     printf("[RCV SYNC]: [ERROR]: Could not receive the peers' number.\n");
     free(num); close(*sock); free(sock); return NULL;
   }
-  num->n = ntohl(num->n);
-  printf("peer_num: %d\n", num->n );
+  if (recv_bytes == 0) {
+    printf("[RCV SYNC]: [WARNING]: No data send by the peer %s\n", ip_port);
+    free(num); close(*sock); free(sock); return NULL;
+  }
+  printf("[RCV SYNC]: Received number of peers: %d\n", num->n );
 
-  // send the peers one by one (except for the receiving peer)
+  // receive the peers one by one
   for (int i=0; i<num->n; i++) {
     sync_peer* peer_d = malloc(sizeof(sync_peer));
     memset(peer_d->data, 0, sizeof(peer_d->data));
     if (socket_rcv(*sock, (char*) peer_d->data, sizeof(peer_d->data)) == -1) {
       printf("[RCV SYNC]: [ERROR]: Could not receive a peer's data.\n");
-      free(peer_d); close(*sock); free(sock); return NULL;
+      free(num); free(peer_d); close(*sock); free(sock); return NULL;
     }
-    printf("peer: %s\n", peer_d->data);
+    printf("[RCV SYNC]: Received peer data: %s\n", peer_d->data);
     parse_peer_d(peer_d);
     free(peer_d);
     usleep(20000);
   }
   free(num);
+
+  pthread_mutex_lock(&cdb_mx);
+  cdb_data = (int*) ht_get(cdb, ip_port);
+  int new_data = (*cdb_data) - 1;
+  // printf("[RCV SYNC]: Decrease the cdb count for %s - %d.\n", ip_port, new_data);
+  ht_put(cdb, ip_port, (void*) &new_data);
+  // cdb_data = (int*) ht_get(cdb, ip_port);
+  // new_data = (*cdb_data);
+  printf("[RCV SYNC]: Decreased the cdb count for %s - %d.\n", ip_port, new_data);
+  pthread_mutex_unlock(&cdb_mx);
   close(*sock); free(sock);
+  // printf("FINISH\n");
 }
 
 void* response(void* sck) {
@@ -352,7 +425,6 @@ void* response(void* sck) {
   // send the number of words
   num_t* num = malloc(sizeof(num_t));
   num->n = txt->size;
-  num->n = htonl(num->n);
   if (socket_send(*sock, (char*) &(num->n), sizeof(num->n)) == -1) {
     printf("[RESPONSE]: [ERROR]: Could not send the number of words.\n");
     free(num); free(txt); close(*sock); free(sock); return NULL;
@@ -385,7 +457,7 @@ void* server() {
     printf("[SERVER]: [ERROR]: Could not bind a master socket.\n");
     exit(1);
   }
-  if (listen(master_sock, 10) == -1) {
+  if (listen(master_sock, 25) == -1) {
     printf("[SERVER]: [ERROR]: Could not listen.\n");
     exit(1);
   }
@@ -406,8 +478,7 @@ void* server() {
       printf("[SERVER]: [ERROR]: Could not receive a flag.\n");
       free(flag); close(*sock); free(sock); continue;
     }
-    flag->flag = ntohl(flag->flag);
-    printf("flag: %d\n", flag->flag);
+    printf("[SERVER]: Incoming flag: %d\n", flag->flag);
     if (flag->flag == 1) {
       pthread_create(&pthread_id[(ind++)%DEFAULT_SIZE], NULL, rcv_sync, (void*) sock);
     } else if (flag->flag == 0){
@@ -419,8 +490,10 @@ void* server() {
 }
 
 int main(int argc, char **argv) {
-  files_table = ht_create(DEFAULT_SIZE);
-  add_my_files(files_table);
+  kdb = ht_create(DEFAULT_SIZE);
+  cdb = ht_create(DEFAULT_SIZE);
+  bldb = ht_create(DEFAULT_SIZE / 4);
+  add_my_files(kdb);
   peers = create_peers();
 
   char server_ip_port[DEFAULT_SIZE];
